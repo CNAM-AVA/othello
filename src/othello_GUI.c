@@ -218,11 +218,11 @@ void change_img_case(int col, int lig, int couleur_j)
   
   if(couleur_j)
   { // image pion blanc
-    gtk_image_set_from_file(GTK_IMAGE(gtk_builder_get_object(p_builder, coord)), "UI_Glade/case_blanc.png");
+    gtk_image_set_from_file(GTK_IMAGE(gtk_builder_get_object(p_builder, coord)), "assets/UI_Glade/case_blanc.png");
   }
   else
   { // image pion noir
-    gtk_image_set_from_file(GTK_IMAGE(gtk_builder_get_object(p_builder, coord)), "UI_Glade/case_noir.png");
+    gtk_image_set_from_file(GTK_IMAGE(gtk_builder_get_object(p_builder, coord)), "assets/UI_Glade/case_noir.png");
   }
 }
 
@@ -705,7 +705,7 @@ int main (int argc, char ** argv)
    if (p_builder != NULL)
    {
       /* Chargement du XML dans p_builder */
-      gtk_builder_add_from_file (p_builder, "UI_Glade/Othello.glade", & p_err);
+      gtk_builder_add_from_file (p_builder, "assets/UI_Glade/Othello.glade", & p_err);
  
       if (p_err == NULL)
       {
