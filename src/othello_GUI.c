@@ -364,6 +364,13 @@ void affiche_fenetre_perdu(void)
 static void clique_connect_serveur(GtkWidget *b)
 {
 	/***** TO DO *****/
+	printf(
+		"Connection to server %s, "
+	 	"Port: %s, "
+		"Login: %s\n", lecture_addr_adversaire(), lecture_port_serveur(), lecture_login()
+	);
+
+	
 }
 
 /* Fonction desactivant bouton demarrer partie */
