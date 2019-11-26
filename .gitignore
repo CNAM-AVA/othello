@@ -1,5 +1,5 @@
 othello_GUI
 .DS_Store
 .vscode
-bin/
+bin/othello_GUI
 othello
