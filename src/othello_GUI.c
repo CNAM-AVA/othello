@@ -617,10 +617,14 @@ static void *f_com_socket(void *p_arg)
 	if (fd_signal > fdmax)
 	{
 		fdmax = fd_signal;
+		printf("Test thread if\n");
+
 	}
 
 	while (1)
 	{
+		printf("Test thread while\n");
+
 		read_fds = master; // copie des ensembles
 
 		if (select(fdmax + 1, &read_fds, &write_fds, NULL, NULL) == -1)
@@ -641,12 +645,17 @@ static void *f_com_socket(void *p_arg)
 					/* Cas où de l'envoie du signal par l'interface graphique pour connexion au joueur adverse */
 
 					/***** TO DO *****/
+
+					printf("Test thread 1\n");
+
 				}
 
 				if (i == sockfd)
 				{ // Acceptation connexion adversaire
 
 					/***** TO DO *****/
+					printf("Test thread 1\n");
+
 
 					gtk_widget_set_sensitive((GtkWidget *)gtk_builder_get_object(p_builder, "button_start"), FALSE);
 				}
@@ -655,11 +664,22 @@ static void *f_com_socket(void *p_arg)
 			{ // Reception et traitement des messages du joueur adverse
 
 				/***** TO DO *****/
+				printf("Test thread 1\n");
+
 			}
 		}
 	}
 
 	return NULL;
+}
+
+void *my__thread_1(void *arg)
+{
+    printf("Nous sommes dans le thread.\n");
+
+    /* Pour enlever le warning */
+    (void) arg;
+    pthread_exit(NULL);
 }
 
 int main(int argc, char **argv)
@@ -777,6 +797,17 @@ int main(int argc, char **argv)
 			/***** TO DO *****/
 
 			// Initialisation socket et autres objets, et création thread pour communications avec joueur adverse
+
+			// pthread_t thread1;
+
+			printf("Avant la création du thread.\n");
+
+			if(pthread_create(&thr_id, NULL, f_com_socket, NULL) == -1) {
+				perror("pthread_create");
+				return EXIT_FAILURE;
+			}
+
+			printf("Après la création du thread.\n");
 
 			gtk_widget_show_all(p_win);
 			gtk_main();
