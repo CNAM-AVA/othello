@@ -10,3 +10,8 @@ Compiler le programme avec make:
 Lancer le programme:
 
 `>./othello <port>`
+
+
+## Tâches:
+
+1. 
