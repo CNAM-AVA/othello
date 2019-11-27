@@ -27,9 +27,13 @@ char *addr_j2, *port_j2; // Info sur adversaire
 
 pthread_t thr_id; // Id du thread fils gerant connexion socket
 
+int rv;
 int sockfd, newsockfd = -1;  // descripteurs de socket
 int addr_size;				 // taille adresse
-struct sockaddr *their_addr; // structure pour stocker adresse adversaire
+struct sockaddr their_addr; // structure pour stocker adresse adversaire
+struct addrinfo s_init, *servinfo, *p, hints;
+socklen_t s_taille;
+char head[2];
 
 fd_set master, read_fds, write_fds; // ensembles de socket pour toutes les sockets actives avec select
 int fdmax;							// utilise pour select
@@ -605,7 +609,6 @@ static void *f_com_socket(void *p_arg)
 	if (sigprocmask(SIG_BLOCK, &signal_mask, NULL) == -1)
 	{
 		printf("[Pourt joueur %d] Erreur sigprocmask\n", port);
-
 		return 0;
 	}
 
@@ -614,7 +617,6 @@ static void *f_com_socket(void *p_arg)
 	if (fd_signal == -1)
 	{
 		printf("[port joueur %d] Erreur signalfd\n", port);
-
 		return 0;
 	}
 
@@ -624,14 +626,10 @@ static void *f_com_socket(void *p_arg)
 	if (fd_signal > fdmax)
 	{
 		fdmax = fd_signal;
-		printf("Test thread if\n");
-
 	}
 
 	while (1)
 	{
-		printf("Test thread while\n");
-
 		read_fds = master; // copie des ensembles
 
 		if (select(fdmax + 1, &read_fds, &write_fds, NULL, NULL) == -1)
@@ -640,10 +638,10 @@ static void *f_com_socket(void *p_arg)
 			exit(4);
 		}
 
-		printf("[Port joueur %d] Entree dans boucle for\n", port);
+		// printf("[Port joueur %d] Entree dans boucle for\n", port);
 		for (i = 0; i <= fdmax; i++)
 		{
-			printf("[Port joueur %d] newsockfd=%d, iteration %d boucle for\n", port, newsockfd, i);
+			// printf("[Port joueur %d] newsockfd=%d, iteration %d boucle for\n", port, newsockfd, i);
 
 			if (FD_ISSET(i, &read_fds))
 			{
@@ -652,18 +650,54 @@ static void *f_com_socket(void *p_arg)
 					/* Cas où de l'envoie du signal par l'interface graphique pour connexion au joueur adverse */
 
 					/***** TO DO *****/
+					memset(&hints, 0, sizeof(hints));
+					hints.ai_family = AF_UNSPEC;
+					hints.ai_socktype = SOCK_STREAM;
+					rv = getaddrinfo(lecture_addr_adversaire(), lecture_port_adversaire(), &hints, &servinfo);
 
-					printf("Test thread 1\n");
+					if(rv != 0) 
+					{
+						fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+						exit(1);
+					}
+					
+					for(p = servinfo; p != NULL; p = p->ai_next) 
+					{
+						if((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+							perror("client: socket");
+							continue;
+						}
+						if((connect(sockfd, p->ai_addr, p->ai_addrlen)) == -1) {
+							close(sockfd);
+							perror("client: connect");
+							continue;
+						}
+						break;
+					}
 
+					if(p == NULL) {
+						fprintf(stderr, "server: failed to bind\n");
+						exit(2);
+					}
+
+					freeaddrinfo(servinfo); 
+
+					printf("Connected\n");
 				}
 
 				if (i == sockfd)
 				{ // Acceptation connexion adversaire
-
+					printf("Accept");
 					/***** TO DO *****/
-					printf("Test thread 1\n");
+					s_taille = sizeof(their_addr);
+    				newsockfd = accept(sockfd, (struct sockaddr *) &their_addr, &s_taille);
 
+					if (newsockfd == -1) {
+						perror("accept");
+						continue;
+					}
 
+					printf("Connexion client");
 					gtk_widget_set_sensitive((GtkWidget *)gtk_builder_get_object(p_builder, "button_start"), FALSE);
 				}
 			}
@@ -671,8 +705,6 @@ static void *f_com_socket(void *p_arg)
 			{ // Reception et traitement des messages du joueur adverse
 
 				/***** TO DO *****/
-				printf("Test thread 1\n");
-
 			}
 		}
 	}
@@ -804,17 +836,49 @@ int main(int argc, char **argv)
 			/***** TO DO *****/
 
 			// Initialisation socket et autres objets, et création thread pour communications avec joueur adverse
+			memset(&s_init, 0, sizeof(s_init));
+			s_init.ai_family = AF_INET;
+			s_init.ai_socktype = SOCK_STREAM;
+			s_init.ai_flags = AI_PASSIVE;
+
+
+			if (getaddrinfo(NULL, argv[1], &s_init, &servinfo) != 0) {
+    			fprintf(stderr, "Erreur getaddrinfo\n");
+    			exit(1);
+  			}
+
+			for(p = servinfo; p != NULL; p = p->ai_next) {
+    			if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+      				perror("Serveur: socket");
+      				continue;
+ 		   		}
+
+				if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+					close(sockfd);
+					perror("Serveur: erreur bind");
+					continue;
+				}
+				break;
+			}
+
+			if (p == NULL) {
+    			fprintf(stderr, "Serveur: echec bind\n");
+    			exit(2);
+  			}
+
+			freeaddrinfo(servinfo);
+
+			if (listen(sockfd, 5) == -1) {
+   			 	perror("listen");
+    			exit(1);
+  			}
 
 			// pthread_t thread1;
-
-			printf("Avant la création du thread.\n");
 
 			if(pthread_create(&thr_id, NULL, f_com_socket, NULL) == -1) {
 				perror("pthread_create");
 				return EXIT_FAILURE;
 			}
-
-			printf("Après la création du thread.\n");
 
 			gtk_widget_show_all(p_win);
 			gtk_main();
