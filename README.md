@@ -22,4 +22,5 @@ Lancer le programme:
 
 ## Tâches:
 
-1. 
+1. Passer les deux clients en écoute sur leur port argument.
+2. L'un des deux clients se connecte à l'autre et ferme son port d'écoute.
