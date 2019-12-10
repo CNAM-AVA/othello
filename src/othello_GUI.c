@@ -638,10 +638,10 @@ static void *f_com_socket(void *p_arg)
 			exit(4);
 		}
 
-		printf("[Port joueur %d] Entree dans boucle for\n", port);
+		// printf("[Port joueur %d] Entree dans boucle for\n", port);
 		for (i = 0; i <= fdmax; i++)
 		{
-			printf("[Port joueur %d] newsockfd=%d, iteration %d boucle for\n", port, newsockfd, i);
+			// printf("[Port joueur %d] newsockfd=%d, iteration %d boucle for\n", port, newsockfd, i);
 			
 			if (FD_ISSET(i, &read_fds))
 			{
@@ -691,9 +691,11 @@ static void *f_com_socket(void *p_arg)
 
 						
 				}
-				printf("%d == %d", i, sockfd);
+				
 				if(i == sockfd)
-				{ // Acceptation connexion adversaire
+				{ 
+				// Acceptation connexion adversaire
+				
 					printf("Accept");
 					/***** TO DO *****/
 					s_taille = sizeof(their_addr);
@@ -704,7 +706,7 @@ static void *f_com_socket(void *p_arg)
 						continue;
 					}
 
-					printf("Connexion client");
+					printf("Connexion client\n");
 					gtk_widget_set_sensitive((GtkWidget *)gtk_builder_get_object(p_builder, "button_start"), FALSE);
 				}
 			}
@@ -712,7 +714,7 @@ static void *f_com_socket(void *p_arg)
 			{ // Reception et traitement des messages du joueur adverse
 
 				/***** TO DO *****/
-			 	printf("Reception messages joueur adverse\n");
+			  	// printf("Reception messages joueur adverse\n");
 			}
 		}
 	}
@@ -849,7 +851,7 @@ int main(int argc, char **argv)
 			s_init.ai_socktype = SOCK_STREAM;
 			s_init.ai_flags = AI_PASSIVE;
 
-			FD_SET(sockfd, &master);
+			// FD_SET(sockfd, &master);
 
 
 			if (getaddrinfo(NULL, argv[1], &s_init, &servinfo) != 0) {
@@ -870,6 +872,8 @@ int main(int argc, char **argv)
 			  }
 				break;
 			}
+
+			FD_SET(sockfd, &master);
 
 			if (p == NULL) {
     			fprintf(stderr, "Serveur: echec bind\n");
