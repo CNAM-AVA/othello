@@ -638,11 +638,11 @@ static void *f_com_socket(void *p_arg)
 			exit(4);
 		}
 
-		// printf("[Port joueur %d] Entree dans boucle for\n", port);
+		printf("[Port joueur %d] Entree dans boucle for\n", port);
 		for (i = 0; i <= fdmax; i++)
 		{
-			// printf("[Port joueur %d] newsockfd=%d, iteration %d boucle for\n", port, newsockfd, i);
-
+			printf("[Port joueur %d] newsockfd=%d, iteration %d boucle for\n", port, newsockfd, i);
+			
 			if (FD_ISSET(i, &read_fds))
 			{
 				if (i == fd_signal)
@@ -653,7 +653,13 @@ static void *f_com_socket(void *p_arg)
 					memset(&hints, 0, sizeof(hints));
 					hints.ai_family = AF_UNSPEC;
 					hints.ai_socktype = SOCK_STREAM;
-					rv = getaddrinfo(lecture_addr_adversaire(), lecture_port_adversaire(), &hints, &servinfo);
+					
+					close(fd_signal);
+					close(sockfd);
+					FD_CLR(fd_signal, &master);
+					FD_CLR(sockfd, &master);
+					
+					rv = getaddrinfo(addr_j2, port_j2, &hints, &servinfo);
 
 					if(rv != 0) 
 					{
@@ -671,7 +677,7 @@ static void *f_com_socket(void *p_arg)
 							close(sockfd);
 							perror("client: connect");
 							continue;
-						}
+						}					
 						break;
 					}
 
@@ -680,17 +686,18 @@ static void *f_com_socket(void *p_arg)
 						exit(2);
 					}
 
-					freeaddrinfo(servinfo); 
+					freeaddrinfo(servinfo);
+					printf("Client connected\n");
 
-					printf("Connected\n");
+						
 				}
-
-				if (i == sockfd)
+				printf("%d == %d", i, sockfd);
+				if(i == sockfd)
 				{ // Acceptation connexion adversaire
 					printf("Accept");
 					/***** TO DO *****/
 					s_taille = sizeof(their_addr);
-    				newsockfd = accept(sockfd, (struct sockaddr *) &their_addr, &s_taille);
+    					newsockfd = accept(sockfd, (struct sockaddr *) &their_addr, &s_taille);
 
 					if (newsockfd == -1) {
 						perror("accept");
@@ -705,6 +712,7 @@ static void *f_com_socket(void *p_arg)
 			{ // Reception et traitement des messages du joueur adverse
 
 				/***** TO DO *****/
+			 	printf("Reception messages joueur adverse\n");
 			}
 		}
 	}
@@ -841,23 +849,25 @@ int main(int argc, char **argv)
 			s_init.ai_socktype = SOCK_STREAM;
 			s_init.ai_flags = AI_PASSIVE;
 
+			FD_SET(sockfd, &master);
+
 
 			if (getaddrinfo(NULL, argv[1], &s_init, &servinfo) != 0) {
-    			fprintf(stderr, "Erreur getaddrinfo\n");
-    			exit(1);
+    			  fprintf(stderr, "Erreur getaddrinfo\n");
+    			  exit(1);
   			}
 
 			for(p = servinfo; p != NULL; p = p->ai_next) {
-    			if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+    			  if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
       				perror("Serveur: socket");
       				continue;
- 		   		}
+ 		   	  }
 
-				if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			  if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
 					close(sockfd);
 					perror("Serveur: erreur bind");
 					continue;
-				}
+			  }
 				break;
 			}
 
@@ -870,7 +880,7 @@ int main(int argc, char **argv)
 
 			if (listen(sockfd, 5) == -1) {
    			 	perror("listen");
-    			exit(1);
+    			        exit(1);
   			}
 
 			// pthread_t thread1;
