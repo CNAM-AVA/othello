@@ -289,9 +289,12 @@ static void coup_joueur(GtkWidget *p_case)
 	/***** TO DO *****/
 
 	// Envoi message à adverssaire
+
+	printf("Envoi de col: %d, lig: %d\n", col, lig);
+
 	snprintf(msg, 50, "%d,%d", htons((uint16_t)col), htons((uint16_t)lig)); // ushort ok pour envoyé des coordonées (0, 65535);
 	taille_message = htons((uint16_t) strlen(msg));
-	printf("Envoi d'un message de taille %d\n", strlen(msg));
+	// printf("Envoi d'un message de taille %d\n", strlen(msg));
 	memcpy(head, &taille_message, 2);
 	send(newsockfd, head, 2, 0);
 
@@ -300,6 +303,11 @@ static void coup_joueur(GtkWidget *p_case)
 	}
 
 	change_img_case(col, lig, couleur);
+	FD_SET(newsockfd, &master);
+
+	if (newsockfd > fdmax) {
+		fdmax = newsockfd;
+	}
 	fflush(stdout);
 }
 
@@ -754,11 +762,20 @@ static void *f_com_socket(void *p_arg)
 				incomming_col = strtok_r(msg, ",", &saveptr);
 				incomming_line = strtok_r(NULL, ",", &saveptr);
 
+				printf("inccol: %s incline: %s\n", incomming_col, incomming_line);
+
 				// Update interface
 				int tmp_col, tmp_lig;
 				sscanf(incomming_col, "%d", &tmp_col);
 				sscanf(incomming_line, "%d", &tmp_lig);
+				printf("Coord reçues: col: %d, lig: %d\n", (int) ntohs(tmp_col), (int) ntohs(tmp_lig));
 				change_img_case((int) ntohs(tmp_col), (int) ntohs(tmp_lig), couleur == 1 ? 0: 1);
+
+				FD_SET(newsockfd, &master);
+
+				if (newsockfd > fdmax) {
+					fdmax = newsockfd;
+				}
 
 			}
 		}
