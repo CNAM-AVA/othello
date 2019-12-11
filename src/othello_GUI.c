@@ -303,7 +303,6 @@ static void coup_joueur(GtkWidget *p_case)
 	}
 
 	change_img_case(col, lig, couleur);
-	FD_SET(newsockfd, &master);
 
 	if (newsockfd > fdmax) {
 		fdmax = newsockfd;
@@ -715,6 +714,12 @@ static void *f_com_socket(void *p_arg)
 
 					freeaddrinfo(servinfo);
 
+					FD_SET(newsockfd, &master);
+                    if(newsockfd>fdmax)
+                    {
+                        fdmax=newsockfd;
+                    }
+
 					// Initialisation du client en couleur noir
 					couleur = 0;
 					canPlay = 1;
@@ -739,6 +744,12 @@ static void *f_com_socket(void *p_arg)
 						continue;
 					}
 
+					FD_SET(newsockfd, &master);
+                    if(newsockfd>fdmax)
+                    {
+                        fdmax=newsockfd;
+                    }
+
 					// Initialisation du serveur en couleur blanc
 					couleur = 1;
 					canPlay = 0;
@@ -747,12 +758,16 @@ static void *f_com_socket(void *p_arg)
 
 					printf("Connexion d'un client\n");
 					gtk_widget_set_sensitive((GtkWidget *)gtk_builder_get_object(p_builder, "button_start"), FALSE);
+
 				}
+
+				
 			}
 			else
 			{ // Reception et traitement des messages du joueur adverse
 
 				/***** TO DO *****/
+				
 
 				// Structure d'un message: head(taille du message), "col,lig"
 				recv(newsockfd, head, 2, 0);
@@ -774,8 +789,6 @@ static void *f_com_socket(void *p_arg)
 				change_img_case((int) ntohs(tmp_col), (int) ntohs(tmp_lig), couleur == 1 ? 0: 1);
 
 				canPlay = 1;
-
-				FD_SET(newsockfd, &master);
 
 				if (newsockfd > fdmax) {
 					fdmax = newsockfd;
@@ -930,6 +943,7 @@ int main(int argc, char **argv)
 				break;
 			}
 
+			FD_ZERO(&master);
 			FD_SET(sockfd, &master);
 
 			if (sockfd > fdmax) {
