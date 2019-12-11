@@ -27,13 +27,14 @@ char *addr_j2, *port_j2; // Info sur adversaire
 
 pthread_t thr_id; // Id du thread fils gerant connexion socket
 
-int rv;
+int rv, taille = 0;
+uint16_t taille_message;
 int sockfd, newsockfd = -1;  // descripteurs de socket
 int addr_size;				 // taille adresse
 struct sockaddr their_addr; // structure pour stocker adresse adversaire
 struct addrinfo s_init, *servinfo, *p, hints;
 socklen_t s_taille;
-char head[2];
+char head[2], msg[50], *incomming_line, *incomming_col, *saveptr;
 
 fd_set master, read_fds, write_fds; // ensembles de socket pour toutes les sockets actives avec select
 int fdmax;							// utilise pour select
@@ -286,6 +287,20 @@ static void coup_joueur(GtkWidget *p_case)
 	coord_to_indexes(gtk_buildable_get_name(GTK_BUILDABLE(gtk_bin_get_child(GTK_BIN(p_case)))), &col, &lig);
 
 	/***** TO DO *****/
+
+	// Envoi message à adverssaire
+	snprintf(msg, 50, "%d,%d", htons((uint16_t)col), htons((uint16_t)lig)); // ushort ok pour envoyé des coordonées (0, 65535);
+	taille_message = htons((uint16_t) strlen(msg));
+	printf("Envoi d'un message de taille %d\n", strlen(msg));
+	memcpy(head, &taille_message, 2);
+	send(newsockfd, head, 2, 0);
+
+	if (send(newsockfd, msg, strlen(msg), 0) == -1) {
+		perror("send");
+	}
+
+	change_img_case(col, lig, couleur);
+	fflush(stdout);
 }
 
 /* Fonction retournant texte du champs adresse du serveur de l'interface graphique */
@@ -669,11 +684,11 @@ static void *f_com_socket(void *p_arg)
 					
 					for(p = servinfo; p != NULL; p = p->ai_next) 
 					{
-						if((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+						if((newsockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
 							perror("client: socket");
 							continue;
 						}
-						if((connect(sockfd, p->ai_addr, p->ai_addrlen)) == -1) {
+						if((connect(newsockfd, p->ai_addr, p->ai_addrlen)) == -1) {
 							close(sockfd);
 							perror("client: connect");
 							continue;
@@ -687,7 +702,13 @@ static void *f_com_socket(void *p_arg)
 					}
 
 					freeaddrinfo(servinfo);
-					printf("Client connected\n");
+
+					// Initialisation du client en couleur blanc
+					couleur = 1;
+					// Initialisation de l'interface
+					init_interface_jeu();
+
+					printf("Connecté à %s:%s\n", addr_j2, port_j2);
 
 						
 				}
@@ -696,17 +717,21 @@ static void *f_com_socket(void *p_arg)
 				{ 
 				// Acceptation connexion adversaire
 				
-					printf("Accept");
 					/***** TO DO *****/
 					s_taille = sizeof(their_addr);
-    					newsockfd = accept(sockfd, (struct sockaddr *) &their_addr, &s_taille);
+    				newsockfd = accept(sockfd, (struct sockaddr *) &their_addr, &s_taille);
 
 					if (newsockfd == -1) {
 						perror("accept");
 						continue;
 					}
 
-					printf("Connexion client\n");
+					// Initialisation du serveur en couleur noir
+					couleur = 0;
+					// Initialisation de l'interface
+					init_interface_jeu();
+
+					printf("Connexion d'un client\n");
 					gtk_widget_set_sensitive((GtkWidget *)gtk_builder_get_object(p_builder, "button_start"), FALSE);
 				}
 			}
@@ -714,21 +739,32 @@ static void *f_com_socket(void *p_arg)
 			{ // Reception et traitement des messages du joueur adverse
 
 				/***** TO DO *****/
-			  	// printf("Reception messages joueur adverse\n");
+
+				// Structure d'un message: head(taille du message), "col,lig"
+				recv(newsockfd, head, 2, 0);
+				memcpy(&taille_message, head, 2);
+				taille = (int) ntohs(taille_message);
+
+				if (taille == 0) continue; // Message de 0 octets lors de l'initialisation
+
+				printf("Réception d'un message de taille %d octets.\n", taille);
+				recv(newsockfd, msg, taille*sizeof(char), 0);
+
+				// Récup lig et col
+				incomming_col = strtok_r(msg, ",", &saveptr);
+				incomming_line = strtok_r(NULL, ",", &saveptr);
+
+				// Update interface
+				int tmp_col, tmp_lig;
+				sscanf(incomming_col, "%d", &tmp_col);
+				sscanf(incomming_line, "%d", &tmp_lig);
+				change_img_case((int) ntohs(tmp_col), (int) ntohs(tmp_lig), couleur == 1 ? 0: 1);
+
 			}
 		}
 	}
 
 	return NULL;
-}
-
-void *my__thread_1(void *arg)
-{
-    printf("Nous sommes dans le thread.\n");
-
-    /* Pour enlever le warning */
-    (void) arg;
-    pthread_exit(NULL);
 }
 
 int main(int argc, char **argv)
@@ -874,6 +910,10 @@ int main(int argc, char **argv)
 			}
 
 			FD_SET(sockfd, &master);
+
+			if (sockfd > fdmax) {
+				fdmax = sockfd;
+			}
 
 			if (p == NULL) {
     			fprintf(stderr, "Serveur: echec bind\n");
