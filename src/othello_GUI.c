@@ -28,6 +28,7 @@ char *addr_j2, *port_j2; // Info sur adversaire
 pthread_t thr_id; // Id du thread fils gerant connexion socket
 
 int rv, taille = 0;
+int canPlay; // Variable d'autorisation de jouer
 uint16_t taille_message;
 int sockfd, newsockfd = -1;  // descripteurs de socket
 int addr_size;				 // taille adresse
@@ -280,6 +281,9 @@ int get_score_J2(void)
 /* Fonction appelee lors du clique sur une case du damier */
 static void coup_joueur(GtkWidget *p_case)
 {
+
+	if (canPlay == 0) return;
+
 	int col, lig, type_msg, nb_piece, score;
 	char buf[MAXDATASIZE];
 
@@ -289,15 +293,8 @@ static void coup_joueur(GtkWidget *p_case)
 	/***** TO DO *****/
 
 	// Envoi message à adverssaire
-
-	printf("Envoi de col: %d, lig: %d\n", col, lig);
-
 	snprintf(msg, 50, ",%u,%u,", htons((uint16_t)col), htons((uint16_t)lig)); // ushort ok pour envoyer des coordonées (0, 65535);
-
-	printf("htons vals: col: %d, lig: %d\n", htons((uint16_t)col), htons((uint16_t)lig));
-
 	taille_message = htons((uint16_t) strlen(msg));
-	// printf("Envoi d'un message de taille %d\n", strlen(msg));
 	memcpy(head, &taille_message, 2);
 	send(newsockfd, head, 2, 0);
 
@@ -311,6 +308,10 @@ static void coup_joueur(GtkWidget *p_case)
 	if (newsockfd > fdmax) {
 		fdmax = newsockfd;
 	}
+
+	// BLoque le jeu tant que l'autre n'a pas joué
+	canPlay = 0;
+
 	fflush(stdout);
 }
 
@@ -714,8 +715,9 @@ static void *f_com_socket(void *p_arg)
 
 					freeaddrinfo(servinfo);
 
-					// Initialisation du client en couleur blanc
-					couleur = 1;
+					// Initialisation du client en couleur noir
+					couleur = 0;
+					canPlay = 1;
 					// Initialisation de l'interface
 					init_interface_jeu();
 
@@ -737,8 +739,9 @@ static void *f_com_socket(void *p_arg)
 						continue;
 					}
 
-					// Initialisation du serveur en couleur noir
-					couleur = 0;
+					// Initialisation du serveur en couleur blanc
+					couleur = 1;
+					canPlay = 0;
 					// Initialisation de l'interface
 					init_interface_jeu();
 
@@ -758,21 +761,19 @@ static void *f_com_socket(void *p_arg)
 
 				if (taille == 0) continue; // Message de 0 octets lors de l'initialisation
 
-				printf("Réception d'un message de taille %d octets.\n", taille);
 				recv(newsockfd, msg, taille*sizeof(char), 0);
 
 				// Récup lig et col
 				incomming_col = strtok_r(msg, ",", &saveptr);
 				incomming_line = strtok_r(NULL, ",", &saveptr);
 
-				printf("inccol: %s incline: %s\n", incomming_col, incomming_line);
-
 				// Update interface
 				int tmp_col, tmp_lig;
 				sscanf(incomming_col, "%u", &tmp_col);
 				sscanf(incomming_line, "%u", &tmp_lig);
-				printf("Coord reçues: col: %d, lig: %d\n", (int) ntohs(tmp_col), (int) ntohs(tmp_lig));
 				change_img_case((int) ntohs(tmp_col), (int) ntohs(tmp_lig), couleur == 1 ? 0: 1);
+
+				canPlay = 1;
 
 				FD_SET(newsockfd, &master);
 
