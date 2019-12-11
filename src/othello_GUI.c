@@ -292,7 +292,10 @@ static void coup_joueur(GtkWidget *p_case)
 
 	printf("Envoi de col: %d, lig: %d\n", col, lig);
 
-	snprintf(msg, 50, "%d,%d", htons((uint16_t)col), htons((uint16_t)lig)); // ushort ok pour envoyé des coordonées (0, 65535);
+	snprintf(msg, 50, ",%u,%u,", htons((uint16_t)col), htons((uint16_t)lig)); // ushort ok pour envoyer des coordonées (0, 65535);
+
+	printf("htons vals: col: %d, lig: %d\n", htons((uint16_t)col), htons((uint16_t)lig));
+
 	taille_message = htons((uint16_t) strlen(msg));
 	// printf("Envoi d'un message de taille %d\n", strlen(msg));
 	memcpy(head, &taille_message, 2);
@@ -766,8 +769,8 @@ static void *f_com_socket(void *p_arg)
 
 				// Update interface
 				int tmp_col, tmp_lig;
-				sscanf(incomming_col, "%d", &tmp_col);
-				sscanf(incomming_line, "%d", &tmp_lig);
+				sscanf(incomming_col, "%u", &tmp_col);
+				sscanf(incomming_line, "%u", &tmp_lig);
 				printf("Coord reçues: col: %d, lig: %d\n", (int) ntohs(tmp_col), (int) ntohs(tmp_lig));
 				change_img_case((int) ntohs(tmp_col), (int) ntohs(tmp_lig), couleur == 1 ? 0: 1);
 
