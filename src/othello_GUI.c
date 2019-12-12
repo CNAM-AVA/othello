@@ -282,8 +282,6 @@ int get_score_J2(void)
 static void coup_joueur(GtkWidget *p_case)
 {
 
-	if (canPlay == 0) return;
-
 	int col, lig, type_msg, nb_piece, score;
 	char buf[MAXDATASIZE];
 
@@ -291,6 +289,9 @@ static void coup_joueur(GtkWidget *p_case)
 	coord_to_indexes(gtk_buildable_get_name(GTK_BUILDABLE(gtk_bin_get_child(GTK_BIN(p_case)))), &col, &lig);
 
 	/***** TO DO *****/
+	if (damier[col][lig] != -1) return;
+
+	// printf("Coord to indexs for col: %d, lig: %d: %s\n", col, lig, coordToIndexes);
 
 	// Envoi message à adverssaire
 	snprintf(msg, 50, ",%u,%u,", htons((uint16_t)col), htons((uint16_t)lig)); // ushort ok pour envoyer des coordonées (0, 65535);
@@ -303,13 +304,15 @@ static void coup_joueur(GtkWidget *p_case)
 	}
 
 	change_img_case(col, lig, couleur);
+	damier[col][lig] = couleur;
+
 
 	if (newsockfd > fdmax) {
 		fdmax = newsockfd;
 	}
 
 	// BLoque le jeu tant que l'autre n'a pas joué
-	canPlay = 0;
+	gele_damier();
 
 	fflush(stdout);
 }
@@ -591,6 +594,30 @@ void init_interface_jeu(void)
 	set_score_J2(2);
 
 	/***** TO DO *****/
+	/*
+	 *      0  1  2  3  4  5  6  7
+	 *    ________________________
+	 * 0 | -1 -1 -1 -1 -1 -1 -1 -1
+	 * 1 | -1 -1 -1 -1 -1 -1 -1 -1
+	 * 2 | -1 -1 -1 -1 -1 -1 -1 -1
+	 * 3 | -1 -1 -1  1  0 -1 -1 -1
+	 * 4 | -1 -1 -1  0  1 -1 -1 -1
+	 * 5 | -1 -1 -1 -1 -1 -1 -1 -1
+	 * 6 | -1 -1 -1 -1 -1 -1 -1 -1
+	 * 7 | -1 -1 -1 -1 -1 -1 -1 -1
+	 */
+
+	for (int i = 0; i < 8; i++) { // Cols
+		for (int j = 0; j < 8; j++) { // Rows
+			damier[i][j] = -1;
+		}
+	}
+
+	// Valeurs initiales
+	damier[3][3] = 1;
+	damier[4][3] = 0;
+	damier[3][4] = 0;
+	damier[4][4] = 1;
 }
 
 /* Fonction reinitialisant la liste des joueurs sur l'interface graphique */
@@ -722,7 +749,6 @@ static void *f_com_socket(void *p_arg)
 
 					// Initialisation du client en couleur noir
 					couleur = 0;
-					canPlay = 1;
 					// Initialisation de l'interface
 					init_interface_jeu();
 
@@ -752,7 +778,7 @@ static void *f_com_socket(void *p_arg)
 
 					// Initialisation du serveur en couleur blanc
 					couleur = 1;
-					canPlay = 0;
+					gele_damier();
 					// Initialisation de l'interface
 					init_interface_jeu();
 
@@ -786,9 +812,15 @@ static void *f_com_socket(void *p_arg)
 				int tmp_col, tmp_lig;
 				sscanf(incomming_col, "%u", &tmp_col);
 				sscanf(incomming_line, "%u", &tmp_lig);
-				change_img_case((int) ntohs(tmp_col), (int) ntohs(tmp_lig), couleur == 1 ? 0: 1);
 
-				canPlay = 1;
+				int col, lig;
+				col = (int) ntohs(tmp_col);
+				lig = (int) ntohs(tmp_lig);
+
+				change_img_case(col, lig, couleur == 1 ? 0: 1);
+				damier[col][lig] = couleur;
+
+				degele_damier();
 
 				if (newsockfd > fdmax) {
 					fdmax = newsockfd;
