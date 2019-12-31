@@ -20,6 +20,12 @@
 /* Variables globales */
 int damier[8][8]; // tableau associe au damier
 int couleur;	  // 0 : pour noir, 1 : pour blanc
+typedef struct Direction Direction;
+struct Direction
+{
+	int dirX;
+	int dirY;
+};
 
 int port; // numero port passe a l'appel
 
@@ -117,6 +123,111 @@ void reset_liste_joueurs(void);
 
 /* Fonction permettant d'ajouter un joueur dans la liste des joueurs sur l'interface graphique */
 void affich_joueur(char *login, char *adresse, char *port);
+
+void coord_jouables();
+
+void coord_jouables()
+{
+	// 0: noir
+	// 1: blanc
+	int adversaire = (couleur - 1) * (couleur - 1);
+	Direction BAS = {0, 1};
+	Direction HAUT = {0, -1};
+	Direction DROITE = {1, 0};
+	Direction GAUCHE = {-1, 0};
+	Direction BAS_DROITE = {1, 1};
+	Direction BAS_GAUCHE = {-1, 1};
+	Direction HAUT_DROITE = {1, -1};
+	Direction HAUT_GAUCHE = {-1, -1};
+	int dist = 2;
+
+	printf("\nCoordonnées jouables\n");
+
+	for(int i=0; i<8; i++)
+	{
+		for(int j=0; j<8; j++)
+		{
+			if(damier[j][i] == couleur)
+			{
+				//check dans toutes les direction
+				// HAUT
+				if(damier[j+HAUT.dirX][i+HAUT.dirY] == adversaire){
+					while(damier[j+HAUT.dirX*dist][i+HAUT.dirY*dist] == adversaire){
+						dist++;
+					}
+					if(damier[j+HAUT.dirX*dist][i+HAUT.dirY*dist] == -1){
+						printf("HAUT: [%d,%d]\n", j+HAUT.dirX*dist, i+HAUT.dirY*dist);
+					}
+				}
+				// BAS
+				if(damier[j+BAS.dirX][i+BAS.dirY] == adversaire){
+					while(damier[j+BAS.dirX*dist][i+BAS.dirY*dist] == adversaire){
+						dist++;
+					}
+					if(damier[j+BAS.dirX*dist][i+BAS.dirY*dist] == -1){
+						printf("BAS: [%d,%d]\n", j+BAS.dirX*dist, i+BAS.dirY*dist);
+					}
+				}
+				// DROITE
+				if(damier[j+DROITE.dirX][i+DROITE.dirY] == adversaire){
+					while(damier[j+DROITE.dirX*dist][i+DROITE.dirY*dist] == adversaire){
+						dist++;
+					}
+					if(damier[j+DROITE.dirX*dist][i+DROITE.dirY*dist] == -1){
+						printf("DROITE: [%d,%d]\n", j+DROITE.dirX*dist, i+DROITE.dirY*dist);
+					}
+				}
+				// GAUCHE
+				if(damier[j+GAUCHE.dirX][i+GAUCHE.dirY] == adversaire){
+					while(damier[j+GAUCHE.dirX*dist][i+GAUCHE.dirY*dist] == adversaire){
+						dist++;
+					}
+					if(damier[j+GAUCHE.dirX*dist][i+GAUCHE.dirY*dist] == -1){
+						printf("GAUCHE: [%d,%d]\n", j+GAUCHE.dirX*dist, i+GAUCHE.dirY*dist);
+					}
+				}
+				// HAUT DROITE
+				if(damier[j+HAUT_DROITE.dirX][i+HAUT_DROITE.dirY] == adversaire){
+					while(damier[j+HAUT_DROITE.dirX*dist][i+HAUT_DROITE.dirY*dist] == adversaire){
+						dist++;
+					}
+					if(damier[j+HAUT_DROITE.dirX*dist][i+HAUT_DROITE.dirY*dist] == -1){
+						printf("HAUT_DROITE: [%d,%d]\n", j+HAUT_DROITE.dirX*dist, i+HAUT_DROITE.dirY*dist);
+					}
+				}
+				// HAUT GAUCHE
+				if(damier[j+HAUT_GAUCHE.dirX][i+HAUT_GAUCHE.dirY] == adversaire){
+					while(damier[j+HAUT_GAUCHE.dirX*dist][i+HAUT_GAUCHE.dirY*dist] == adversaire){
+						dist++;
+					}
+					if(damier[j+HAUT_GAUCHE.dirX*dist][i+HAUT_GAUCHE.dirY*dist] == -1){
+						printf("HAUT_GAUCHE: [%d,%d]\n", j+HAUT_GAUCHE.dirX*dist, i+HAUT_GAUCHE.dirY*dist);
+					}
+				}
+				// BAS DROITE
+				if(damier[j+BAS_DROITE.dirX][i+BAS_DROITE.dirY] == adversaire){
+					while(damier[j+BAS_DROITE.dirX*dist][i+BAS_DROITE.dirY*dist] == adversaire){
+						dist++;
+					}
+					if(damier[j+BAS_DROITE.dirX*dist][i+BAS_DROITE.dirY*dist] == -1){
+						printf("BAS_DROITE: [%d,%d]\n", j+BAS_DROITE.dirX*dist, i+BAS_DROITE.dirY*dist);
+					}
+				}
+				// BAS GAUCHE
+				if(damier[j+BAS_GAUCHE.dirX][i+BAS_GAUCHE.dirY] == adversaire){
+					while(damier[j+BAS_GAUCHE.dirX*dist][i+BAS_GAUCHE.dirY*dist] == adversaire){
+						dist++;
+					}
+					if(damier[j+BAS_GAUCHE.dirX*dist][i+BAS_GAUCHE.dirY*dist] == -1){
+						printf("BAS_GAUCHE: [%d,%d]\n", j+BAS_GAUCHE.dirX*dist, i+BAS_GAUCHE.dirY*dist);
+					}
+				}
+				printf("[%d,%d]\n", j, i);
+			}
+		}
+	}
+}
+ 
 
 /* Fonction transforme coordonnees du damier graphique en indexes pour matrice du damier */
 void coord_to_indexes(const gchar *coord, int *col, int *lig)
@@ -817,8 +928,11 @@ static void *f_com_socket(void *p_arg)
 				col = (int) ntohs(tmp_col);
 				lig = (int) ntohs(tmp_lig);
 
-				change_img_case(col, lig, couleur == 1 ? 0: 1);
-				damier[col][lig] = couleur;
+				int inv_couleur = couleur == 1 ? 0 : 1;
+				change_img_case(col, lig, inv_couleur);
+				damier[col][lig] = inv_couleur;
+
+				coord_jouables();
 
 				degele_damier();
 
