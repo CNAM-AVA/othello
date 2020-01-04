@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,6 +36,14 @@ Direction HAUT_GAUCHE = {-1, -1};
 
 int coord_jouables[70][2];
 int taille_coord = 0;
+
+int pions_captures[50][2];
+int nb_pions_captures = 0;
+
+int scoreJ1 = 2;
+int scoreJ2 = 2;
+
+int tour = 1;
 
 int port; // numero port passe a l'appel
 
@@ -150,6 +157,8 @@ void verifier_direction(Direction dir, int col, int lig);
 
 void get_coord_jouables();
 
+void capturer_direction(Direction dir, int col, int lig);
+
 void capture_pions(int* coordClic);
 
 int dans_le_damier(int col, int lig){
@@ -233,253 +242,82 @@ void get_coord_jouables()
 	}
 }
 
-void capture_pions(int* coordClic){
-	int j = coordClic[0];
-	int i = coordClic[1];
+void capturer_direction(Direction dir, int col, int lig)
+{
 	int adversaire = (couleur - 1) * (couleur - 1);
 	int dist = 1;
-	int capture_pions[50][2];
-	int nb_pions_captures = 0;
+	nb_pions_captures = 0;
+
+	if(dans_le_damier(col+dir.dirX, lig+dir.dirY))
+	{
+		if(damier[col+dir.dirX][lig+dir.dirY] == adversaire)
+		{
+			while(damier[col+dir.dirX*dist][lig+dir.dirY*dist] == adversaire)
+			{
+				pions_captures[nb_pions_captures][0] = col+dir.dirX*dist;
+				pions_captures[nb_pions_captures][1] = lig+dir.dirY*dist;
+				nb_pions_captures++;
+				dist++;
+				if(!dans_le_damier(col+dir.dirX*dist, lig+dir.dirY*dist))
+					return;
+			}
+			if(damier[col+dir.dirX*dist][lig+dir.dirY*dist] == couleur)
+			{
+				for(int k=0; k<nb_pions_captures; k++)
+				{
+					damier[pions_captures[k][0]][pions_captures[k][1]] = couleur;
+					change_img_case(pions_captures[k][0], pions_captures[k][1], couleur);
+
+					// Envoi message à adverssaire
+					// printf("send: [%u, %u]\n", htons((uint16_t)pions_captures[k][0]), htons((uint16_t)pions_captures[k][1]));
+					snprintf(msg, 50, ",%u,%u,", htons((uint16_t)pions_captures[k][0]), htons((uint16_t)pions_captures[k][1])); // ushort ok pour envoyer des coordonées (0, 65535);
+					taille_message = htons((uint16_t) strlen(msg));
+					memcpy(head, &taille_message, 2);
+					send(newsockfd, head, 2, 0);
+
+					if (send(newsockfd, msg, strlen(msg), 0) == -1) {
+						perror("send");
+					}
+
+					scoreJ1++;
+					scoreJ2--;
+				}
+			}
+		}
+	}
+	
+}
+
+void capture_pions(int* coordClic){
+	int col = coordClic[0];
+	int lig = coordClic[1];
+
+	scoreJ1++;
 
 	// Check dans toutes les directions
 	// HAUT
-	if(damier[j+HAUT.dirX][i+HAUT.dirY] == adversaire)
-	{
-		nb_pions_captures = 0;
-		dist = 1;
-		while(damier[j+HAUT.dirX*dist][i+HAUT.dirY*dist] == adversaire)
-		{
-			capture_pions[nb_pions_captures][0] = j+HAUT.dirX*dist;
-			capture_pions[nb_pions_captures][1] = i+HAUT.dirY*dist;
-			nb_pions_captures++;
-			dist++;
-		}
-		if(damier[j+HAUT.dirX*dist][i+HAUT.dirY*dist] == couleur)
-		{
-			for(int k=0; k<nb_pions_captures; k++)
-			{
-				damier[capture_pions[k][0]][capture_pions[k][1]] = couleur;
-				change_img_case(capture_pions[k][0], capture_pions[k][1], couleur);
+	capturer_direction(HAUT, col, lig);
 
-				// Envoi message à adverssaire
-				snprintf(msg, 50, ",%u,%u,", htons((uint16_t)capture_pions[k][0]), htons((uint16_t)capture_pions[k][1])); // ushort ok pour envoyer des coordonées (0, 65535);
-				taille_message = htons((uint16_t) strlen(msg));
-				memcpy(head, &taille_message, 2);
-				send(newsockfd, head, 2, 0);
-
-				if (send(newsockfd, msg, strlen(msg), 0) == -1) {
-					perror("send");
-				}
-			}
-		}
-	}
 	// BAS
-	if(damier[j+BAS.dirX][i+BAS.dirY] == adversaire)
-	{
-		nb_pions_captures = 0;
-		dist = 1;
-		while(damier[j+BAS.dirX*dist][i+BAS.dirY*dist] == adversaire){
-			capture_pions[nb_pions_captures][0] = j+BAS.dirX*dist;
-			capture_pions[nb_pions_captures][1] = i+BAS.dirY*dist;
-			nb_pions_captures++;
-			dist++;
-		}
-		if(damier[j+BAS.dirX*dist][i+BAS.dirY*dist] == couleur){
-			for(int k=0; k<nb_pions_captures; k++)
-			{
-				damier[capture_pions[k][0]][capture_pions[k][1]] = couleur;
-				change_img_case(capture_pions[k][0], capture_pions[k][1], couleur);
+	capturer_direction(BAS, col, lig);
 
-				// Envoi message à adverssaire
-				snprintf(msg, 50, ",%u,%u,", htons((uint16_t)capture_pions[k][0]), htons((uint16_t)capture_pions[k][1])); // ushort ok pour envoyer des coordonées (0, 65535);
-				taille_message = htons((uint16_t) strlen(msg));
-				memcpy(head, &taille_message, 2);
-				send(newsockfd, head, 2, 0);
-
-				if (send(newsockfd, msg, strlen(msg), 0) == -1) {
-					perror("send");
-				}
-			}
-		}
-	}
 	// DROITE
-	if(damier[j+DROITE.dirX][i+DROITE.dirY] == adversaire)
-	{
-		nb_pions_captures = 0;
-		dist = 1;
-		while(damier[j+DROITE.dirX*dist][i+DROITE.dirY*dist] == adversaire){
-			capture_pions[nb_pions_captures][0] = j+DROITE.dirX*dist;
-			capture_pions[nb_pions_captures][1] = i+DROITE.dirY*dist;
-			nb_pions_captures++;
-			dist++;
-		}
-		if(damier[j+DROITE.dirX*dist][i+DROITE.dirY*dist] == couleur){
-			for(int k=0; k<nb_pions_captures; k++)
-			{
-				damier[capture_pions[k][0]][capture_pions[k][1]] = couleur;
-				change_img_case(capture_pions[k][0], capture_pions[k][1], couleur);
+	capturer_direction(DROITE, col, lig);
 
-				// Envoi message à adverssaire
-				snprintf(msg, 50, ",%u,%u,", htons((uint16_t)capture_pions[k][0]), htons((uint16_t)capture_pions[k][1])); // ushort ok pour envoyer des coordonées (0, 65535);
-				taille_message = htons((uint16_t) strlen(msg));
-				memcpy(head, &taille_message, 2);
-				send(newsockfd, head, 2, 0);
-
-				if (send(newsockfd, msg, strlen(msg), 0) == -1) {
-					perror("send");
-				}
-			}
-		}
-	}
 	// GAUCHE
-	if(damier[j+GAUCHE.dirX][i+GAUCHE.dirY] == adversaire)
-	{
-		nb_pions_captures = 0;
-		dist = 1;
-		while(damier[j+GAUCHE.dirX*dist][i+GAUCHE.dirY*dist] == adversaire){
-			capture_pions[nb_pions_captures][0] = j+GAUCHE.dirX*dist;
-			capture_pions[nb_pions_captures][1] = i+GAUCHE.dirY*dist;
-			nb_pions_captures++;
-			dist++;
-		}
-		if(damier[j+GAUCHE.dirX*dist][i+GAUCHE.dirY*dist] == couleur){
-			for(int k=0; k<nb_pions_captures; k++)
-			{
-				damier[capture_pions[k][0]][capture_pions[k][1]] = couleur;
-				change_img_case(capture_pions[k][0], capture_pions[k][1], couleur);
+	capturer_direction(GAUCHE, col, lig);
 
-				// Envoi message à adverssaire
-				snprintf(msg, 50, ",%u,%u,", htons((uint16_t)capture_pions[k][0]), htons((uint16_t)capture_pions[k][1])); // ushort ok pour envoyer des coordonées (0, 65535);
-				taille_message = htons((uint16_t) strlen(msg));
-				memcpy(head, &taille_message, 2);
-				send(newsockfd, head, 2, 0);
-
-				if (send(newsockfd, msg, strlen(msg), 0) == -1) {
-					perror("send");
-				}
-			}
-		}
-	}
 	// HAUT DROITE
-	if(damier[j+HAUT_DROITE.dirX][i+HAUT_DROITE.dirY] == adversaire)
-	{
-		nb_pions_captures = 0;
-		dist = 1;
-		while(damier[j+HAUT_DROITE.dirX*dist][i+HAUT_DROITE.dirY*dist] == adversaire){
-			capture_pions[nb_pions_captures][0] = j+HAUT_DROITE.dirX*dist;
-			capture_pions[nb_pions_captures][1] = i+HAUT_DROITE.dirY*dist;
-			nb_pions_captures++;
-			dist++;
-		}
-		if(damier[j+HAUT_DROITE.dirX*dist][i+HAUT_DROITE.dirY*dist] == couleur)
-		{
-			for(int k=0; k<nb_pions_captures; k++)
-			{
-				damier[capture_pions[k][0]][capture_pions[k][1]] = couleur;
-				change_img_case(capture_pions[k][0], capture_pions[k][1], couleur);
+	capturer_direction(HAUT_DROITE, col, lig);
 
-				// Envoi message à adverssaire
-				snprintf(msg, 50, ",%u,%u,", htons((uint16_t)capture_pions[k][0]), htons((uint16_t)capture_pions[k][1])); // ushort ok pour envoyer des coordonées (0, 65535);
-				taille_message = htons((uint16_t) strlen(msg));
-				memcpy(head, &taille_message, 2);
-				send(newsockfd, head, 2, 0);
-
-				if (send(newsockfd, msg, strlen(msg), 0) == -1) {
-					perror("send");
-				}
-			}
-		}
-	}
 	// HAUT GAUCHE
-	if(damier[j+HAUT_GAUCHE.dirX][i+HAUT_GAUCHE.dirY] == adversaire)
-	{
-		nb_pions_captures = 0;
-		dist = 1;
-		while(damier[j+HAUT_GAUCHE.dirX*dist][i+HAUT_GAUCHE.dirY*dist] == adversaire){
-			capture_pions[nb_pions_captures][0] = j+HAUT_GAUCHE.dirX*dist;
-			capture_pions[nb_pions_captures][1] = i+HAUT_GAUCHE.dirY*dist;
-			nb_pions_captures++;
-			dist++;
-		}
-		if(damier[j+HAUT_GAUCHE.dirX*dist][i+HAUT_GAUCHE.dirY*dist] == couleur)
-		{
-			for(int k=0; k<nb_pions_captures; k++)
-			{
-				damier[capture_pions[k][0]][capture_pions[k][1]] = couleur;
-				change_img_case(capture_pions[k][0], capture_pions[k][1], couleur);
+	capturer_direction(HAUT_GAUCHE, col, lig);
 
-				// Envoi message à adverssaire
-				snprintf(msg, 50, ",%u,%u,", htons((uint16_t)capture_pions[k][0]), htons((uint16_t)capture_pions[k][1])); // ushort ok pour envoyer des coordonées (0, 65535);
-				taille_message = htons((uint16_t) strlen(msg));
-				memcpy(head, &taille_message, 2);
-				send(newsockfd, head, 2, 0);
-
-				if (send(newsockfd, msg, strlen(msg), 0) == -1) {
-					perror("send");
-				}
-			}
-		}
-	}
 	// BAS DROITE
-	if(damier[j+BAS_DROITE.dirX][i+BAS_DROITE.dirY] == adversaire)
-	{
-		nb_pions_captures = 0;
-		dist = 1;
-		while(damier[j+BAS_DROITE.dirX*dist][i+BAS_DROITE.dirY*dist] == adversaire){
-			capture_pions[nb_pions_captures][0] = j+BAS_DROITE.dirX*dist;
-			capture_pions[nb_pions_captures][1] = i+BAS_DROITE.dirY*dist;
-			nb_pions_captures++;
-			dist++;
-		}
-		if(damier[j+BAS_DROITE.dirX*dist][i+BAS_DROITE.dirY*dist] == couleur)
-		{
-			for(int k=0; k<nb_pions_captures; k++)
-			{
-				damier[capture_pions[k][0]][capture_pions[k][1]] = couleur;
-				change_img_case(capture_pions[k][0], capture_pions[k][1], couleur);
+	capturer_direction(BAS_DROITE, col, lig);
 
-				// Envoi message à adverssaire
-				snprintf(msg, 50, ",%u,%u,", htons((uint16_t)capture_pions[k][0]), htons((uint16_t)capture_pions[k][1])); // ushort ok pour envoyer des coordonées (0, 65535);
-				taille_message = htons((uint16_t) strlen(msg));
-				memcpy(head, &taille_message, 2);
-				send(newsockfd, head, 2, 0);
-
-				if (send(newsockfd, msg, strlen(msg), 0) == -1) {
-					perror("send");
-				}
-			}
-		}
-	}
 	// BAS GAUCHE
-	if(damier[j+BAS_GAUCHE.dirX][i+BAS_GAUCHE.dirY] == adversaire)
-	{
-		nb_pions_captures = 0;
-		dist = 1;
-		while(damier[j+BAS_GAUCHE.dirX*dist][i+BAS_GAUCHE.dirY*dist] == adversaire){
-			capture_pions[nb_pions_captures][0] = j+BAS_GAUCHE.dirX*dist;
-			capture_pions[nb_pions_captures][1] = i+BAS_GAUCHE.dirY*dist;
-			nb_pions_captures++;
-			dist++;
-		}
-		if(damier[j+BAS_GAUCHE.dirX*dist][i+BAS_GAUCHE.dirY*dist] == couleur)
-		{
-			for(int k=0; k<nb_pions_captures; k++)
-			{
-				damier[capture_pions[k][0]][capture_pions[k][1]] = couleur;
-				change_img_case(capture_pions[k][0], capture_pions[k][1], couleur);
-
-				// Envoi message à adverssaire
-				snprintf(msg, 50, ",%u,%u,", htons((uint16_t)capture_pions[k][0]), htons((uint16_t)capture_pions[k][1])); // ushort ok pour envoyer des coordonées (0, 65535);
-				taille_message = htons((uint16_t) strlen(msg));
-				memcpy(head, &taille_message, 2);
-				send(newsockfd, head, 2, 0);
-
-				if (send(newsockfd, msg, strlen(msg), 0) == -1) {
-					perror("send");
-				}
-			}
-		}
-	}
+	capturer_direction(BAS_GAUCHE, col, lig);
 
 }
 
@@ -694,6 +532,8 @@ static void coup_joueur(GtkWidget *p_case)
 
 	// BLoque le jeu tant que l'autre n'a pas joué
 	gele_damier();
+
+	tour = 1;
 
 	fflush(stdout);
 }
@@ -1025,8 +865,8 @@ void init_interface_jeu(void)
 		set_label_J2("Vous");
 	}
 
-	set_score_J1(2);
-	set_score_J2(2);
+	set_score_J1(scoreJ1);
+	set_score_J2(scoreJ2);
 
 	/***** TO DO *****/
 	/*
@@ -1256,6 +1096,15 @@ static void *f_com_socket(void *p_arg)
 				int inv_couleur = couleur == 1 ? 0 : 1;
 				change_img_case(col, lig, inv_couleur);
 				damier[col][lig] = inv_couleur;
+				scoreJ2++;
+
+				if(tour > 1)
+					scoreJ1--;
+
+				printf("Vous: %d, adversaire: %d\n", scoreJ1, scoreJ2);
+
+				set_score_J1(scoreJ1);
+				set_score_J2(scoreJ2);
 
 				get_coord_jouables();
 
@@ -1264,6 +1113,8 @@ static void *f_com_socket(void *p_arg)
 				if (newsockfd > fdmax) {
 					fdmax = newsockfd;
 				}
+
+				tour++;
 
 			}
 		}
