@@ -34,16 +34,14 @@ Direction BAS_GAUCHE = {-1, 1};
 Direction HAUT_DROITE = {1, -1};
 Direction HAUT_GAUCHE = {-1, -1};
 
-int coord_jouables[70][2];
+int coord_jouables[100][2];
 int taille_coord = 0;
 
-int pions_captures[50][2];
+int pions_captures[100][2];
 int nb_pions_captures = 0;
 
 int scoreJ1 = 2;
 int scoreJ2 = 2;
-
-int tour = 1;
 
 int port; // numero port passe a l'appel
 
@@ -59,7 +57,8 @@ int addr_size;				 // taille adresse
 struct sockaddr their_addr; // structure pour stocker adresse adversaire
 struct addrinfo s_init, *servinfo, *p, hints;
 socklen_t s_taille;
-char head[2], msg[50], *incomming_line, *incomming_col, *saveptr;
+char head[2], msg[50], *incomming_line, *incomming_col;
+char* saveptr = msg;
 
 fd_set master, read_fds, write_fds; // ensembles de socket pour toutes les sockets actives avec select
 int fdmax;							// utilise pour select
@@ -157,11 +156,12 @@ void verifier_direction(Direction dir, int col, int lig);
 
 void get_coord_jouables();
 
-void capturer_direction(Direction dir, int col, int lig);
+void capturer_direction(Direction dir, int col, int lig, int coul);
 
-void capture_pions(int* coordClic);
+void capture_pions(int* coordClic, int coul);
 
-int dans_le_damier(int col, int lig){
+int dans_le_damier(int col, int lig)
+{
 	if(col >= 0 && lig >= 0 && col <= 7 && lig <= 7)
 		return 1;
 	else
@@ -236,15 +236,15 @@ void get_coord_jouables()
 			}
 		}
 	}
-	printf("Tableau des coord jouables: \n");
-	for(int k=0; k<taille_coord; k++){
-		printf("[%d, %d]\n", coord_jouables[k][0], coord_jouables[k][1]);
-	}
+	// printf("Tableau des coord jouables: \n");
+	// for(int k=0; k<taille_coord; k++){
+	// 	printf("[%d, %d]\n", coord_jouables[k][0], coord_jouables[k][1]);
+	// }
 }
 
-void capturer_direction(Direction dir, int col, int lig)
+void capturer_direction(Direction dir, int col, int lig, int coul)
 {
-	int adversaire = (couleur - 1) * (couleur - 1);
+	int adversaire = (coul - 1) * (coul - 1);
 	int dist = 1;
 	nb_pions_captures = 0;
 
@@ -261,26 +261,21 @@ void capturer_direction(Direction dir, int col, int lig)
 				if(!dans_le_damier(col+dir.dirX*dist, lig+dir.dirY*dist))
 					return;
 			}
-			if(damier[col+dir.dirX*dist][lig+dir.dirY*dist] == couleur)
+			if(damier[col+dir.dirX*dist][lig+dir.dirY*dist] == coul)
 			{
 				for(int k=0; k<nb_pions_captures; k++)
 				{
-					damier[pions_captures[k][0]][pions_captures[k][1]] = couleur;
-					change_img_case(pions_captures[k][0], pions_captures[k][1], couleur);
+					damier[pions_captures[k][0]][pions_captures[k][1]] = coul;
+					change_img_case(pions_captures[k][0], pions_captures[k][1], coul);
 
-					// Envoi message à adverssaire
-					// printf("send: [%u, %u]\n", htons((uint16_t)pions_captures[k][0]), htons((uint16_t)pions_captures[k][1]));
-					snprintf(msg, 50, ",%u,%u,", htons((uint16_t)pions_captures[k][0]), htons((uint16_t)pions_captures[k][1])); // ushort ok pour envoyer des coordonées (0, 65535);
-					taille_message = htons((uint16_t) strlen(msg));
-					memcpy(head, &taille_message, 2);
-					send(newsockfd, head, 2, 0);
-
-					if (send(newsockfd, msg, strlen(msg), 0) == -1) {
-						perror("send");
+					if(couleur == coul){
+						scoreJ1++;
+						scoreJ2--;
 					}
-
-					scoreJ1++;
-					scoreJ2--;
+					else{
+						scoreJ2++;
+						scoreJ1--;
+					}
 				}
 			}
 		}
@@ -288,37 +283,34 @@ void capturer_direction(Direction dir, int col, int lig)
 	
 }
 
-void capture_pions(int* coordClic){
+void capture_pions(int* coordClic, int coul){
 	int col = coordClic[0];
 	int lig = coordClic[1];
 
-	scoreJ1++;
-
 	// Check dans toutes les directions
 	// HAUT
-	capturer_direction(HAUT, col, lig);
+	capturer_direction(HAUT, col, lig, coul);
 
 	// BAS
-	capturer_direction(BAS, col, lig);
+	capturer_direction(BAS, col, lig, coul);
 
 	// DROITE
-	capturer_direction(DROITE, col, lig);
+	capturer_direction(DROITE, col, lig, coul);
 
 	// GAUCHE
-	capturer_direction(GAUCHE, col, lig);
+	capturer_direction(GAUCHE, col, lig, coul);
 
 	// HAUT DROITE
-	capturer_direction(HAUT_DROITE, col, lig);
+	capturer_direction(HAUT_DROITE, col, lig, coul);
 
 	// HAUT GAUCHE
-	capturer_direction(HAUT_GAUCHE, col, lig);
+	capturer_direction(HAUT_GAUCHE, col, lig, coul);
 
 	// BAS DROITE
-	capturer_direction(BAS_DROITE, col, lig);
+	capturer_direction(BAS_DROITE, col, lig, coul);
 
 	// BAS GAUCHE
-	capturer_direction(BAS_GAUCHE, col, lig);
-
+	capturer_direction(BAS_GAUCHE, col, lig, coul);
 }
 
 /* Fonction transforme coordonnees du damier graphique en indexes pour matrice du damier */
@@ -486,7 +478,8 @@ static void coup_joueur(GtkWidget *p_case)
 {
 
 	int col, lig, type_msg, nb_piece, score;
-	char buf[MAXDATASIZE];
+	// char buf[MAXDATASIZE];
+
 
 	// Traduction coordonnees damier en indexes matrice damier
 	coord_to_indexes(gtk_buildable_get_name(GTK_BUILDABLE(gtk_bin_get_child(GTK_BIN(p_case)))), &col, &lig);
@@ -503,37 +496,45 @@ static void coup_joueur(GtkWidget *p_case)
 
 	if(coup_jouable != 1) return;
 
-
-
 	// printf("Coord to indexs for col: %d, lig: %d: %s\n", col, lig, coordToIndexes);
-
-	// Envoi message à adverssaire
-	snprintf(msg, 50, ",%u,%u,", htons((uint16_t)col), htons((uint16_t)lig)); // ushort ok pour envoyer des coordonées (0, 65535);
-	taille_message = htons((uint16_t) strlen(msg));
-	memcpy(head, &taille_message, 2);
-	send(newsockfd, head, 2, 0);
-
-	if (send(newsockfd, msg, strlen(msg), 0) == -1) {
-		perror("send");
-	}
 
 	change_img_case(col, lig, couleur);
 	damier[col][lig] = couleur;
+	scoreJ1++;
 
 	int coordClic[2];
 	coordClic[0] = col;
 	coordClic[1] = lig;
-	capture_pions(coordClic);
+	capture_pions(coordClic, couleur);
 	// compute_board(col, lig);
 
 	if (newsockfd > fdmax) {
 		fdmax = newsockfd;
 	}
 
+	if(couleur == 1){
+		set_score_J1(scoreJ1);
+		set_score_J2(scoreJ2);
+	} else {
+		set_score_J1(scoreJ2);
+		set_score_J2(scoreJ1);
+	}
+
 	// BLoque le jeu tant que l'autre n'a pas joué
 	gele_damier();
 
-	tour = 1;
+	// Envoi message à adverssaire
+	snprintf(msg, 50, ",%u,%u,", htons((uint16_t)col), htons((uint16_t)lig)); // ushort ok pour envoyer des coordonées (0, 65535);
+	taille_message = htons((uint16_t) strlen(msg));
+	memcpy(head, &taille_message, 2);
+
+	if(send(newsockfd, head, 2, 0) == -1) {
+		perror("send");
+	}
+
+	if(send(newsockfd, msg, strlen(msg), 0) == -1) {
+		perror("send");
+	}
 
 	fflush(stdout);
 }
@@ -921,7 +922,7 @@ static void *f_com_socket(void *p_arg)
 {
 	int i, nbytes, col, lig;
 
-	char buf[MAXDATASIZE], *tmp, *p_parse;
+	// char buf[MAXDATASIZE], *tmp, *p_parse;
 	int len, bytes_sent, t_msg_recu;
 
 	sigset_t signal_mask;
@@ -1069,7 +1070,6 @@ static void *f_com_socket(void *p_arg)
 			{ // Reception et traitement des messages du joueur adverse
 
 				/***** TO DO *****/
-				
 
 				// Structure d'un message: head(taille du message), "col,lig"
 				recv(newsockfd, head, 2, 0);
@@ -1096,15 +1096,18 @@ static void *f_com_socket(void *p_arg)
 				int inv_couleur = couleur == 1 ? 0 : 1;
 				change_img_case(col, lig, inv_couleur);
 				damier[col][lig] = inv_couleur;
+
+				int coord[2] = {col, lig};
+				capture_pions(coord, inv_couleur);
 				scoreJ2++;
 
-				if(tour > 1)
-					scoreJ1--;
-
-				printf("Vous: %d, adversaire: %d\n", scoreJ1, scoreJ2);
-
-				set_score_J1(scoreJ1);
-				set_score_J2(scoreJ2);
+				if(couleur == 1){
+					set_score_J1(scoreJ1);
+					set_score_J2(scoreJ2);
+				} else {
+					set_score_J1(scoreJ2);
+					set_score_J2(scoreJ1);
+				}
 
 				get_coord_jouables();
 
@@ -1113,9 +1116,6 @@ static void *f_com_socket(void *p_arg)
 				if (newsockfd > fdmax) {
 					fdmax = newsockfd;
 				}
-
-				tour++;
-
 			}
 		}
 	}
