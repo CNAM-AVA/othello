@@ -170,19 +170,24 @@ int dans_le_damier(int col, int lig)
 
 void verifier_direction(Direction dir, int col, int lig)
 {
+	// On déduit la couleur de l'adversaire d'après celle du joueur actuel
 	int adversaire = (couleur - 1) * (couleur - 1);
+	// variable permettant d'agrandir la ligne de vérification
 	int dist = 2;
+	// On s'assure que les coordonnées sont bien sur le damier
 	if(dans_le_damier(col+dir.dirX, lig+dir.dirY))
 	{
+		// Si l'on tombe sur on pion adverse dans cette direction on peu commencer à vérifier
 		if(damier[col+dir.dirX][lig+dir.dirY] == adversaire){
 			if(dans_le_damier(col+dir.dirX*dist, lig+dir.dirY*dist)){
+				// On continue tant que les pions reste ceux de l'adversaire
 				while(damier[col+dir.dirX*dist][lig+dir.dirY*dist] == adversaire){
 					dist++;
 					if(!dans_le_damier(col+dir.dirX*dist, lig+dir.dirY*dist))
 						return;
 				}
 			}
-			
+			// Si la boucle s'arrete sur une case vide la coordonnées est jouable
 			if(damier[col+dir.dirX*dist][lig+dir.dirY*dist] == -1){
 				// printf("dir: [%d,%d]\n", col+dir.dirX*dist, lig+dir.dirY*dist);
 				coord_jouables[taille_coord][0] = col+dir.dirX*dist;
@@ -195,53 +200,40 @@ void verifier_direction(Direction dir, int col, int lig)
 
 void get_coord_jouables()
 {
-	// 0: noir
-	// 1: blanc
-
 	taille_coord = 0;
 
-	// printf("\nCoordonnées jouables\n");
-
+	// On parcours tout le damier
 	for(int i=0; i<8; i++)
 	{
 		for(int j=0; j<8; j++)
 		{
+			// Si on tombe sur un pion qui appartient au joueur
+			// On verifie les coordonnées jouables (permettant une capture)
+			// dans toutes les directions
 			if(damier[j][i] == couleur)
 			{
-				//check dans toutes les directions
 				// HAUT
 				verifier_direction(HAUT, j, i);
-
 				// BAS
 				verifier_direction(BAS, j, i);
-
 				// DROITE
 				verifier_direction(DROITE, j, i);
-
 				// GAUCHE
 				verifier_direction(GAUCHE, j, i);
-
 				// HAUT DROITE
 				verifier_direction(HAUT_DROITE, j, i);
-				
 				// HAUT GAUCHE
 				verifier_direction(HAUT_GAUCHE, j, i);
-				
 				// BAS DROITE
 				verifier_direction(BAS_DROITE, j, i);
-				
 				// BAS GAUCHE
 				verifier_direction(BAS_GAUCHE, j, i);
-				
 			}
 		}
 	}
-	// printf("Tableau des coord jouables: \n");
-	// for(int k=0; k<taille_coord; k++){
-	// 	printf("[%d, %d]\n", coord_jouables[k][0], coord_jouables[k][1]);
-	// }
 }
 
+// Cette fonction reprend beaucoup de mécanismes de la fonction get_coord_jouables()
 void capturer_direction(Direction dir, int col, int lig, int coul)
 {
 	int adversaire = (coul - 1) * (coul - 1);
