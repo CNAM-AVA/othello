@@ -520,15 +520,17 @@ static void coup_joueur(GtkWidget *p_case)
 	taille_message = htons((uint16_t) strlen(msg));
 	memcpy(head, &taille_message, 2);
 
+	// Envoi de la taille du message d'abord
 	if(send(newsockfd, head, 2, 0) == -1) {
 		perror("send");
 	}
 
+	// Envoi des coordonnées
 	if(send(newsockfd, msg, strlen(msg), 0) == -1) {
 		perror("send");
 	}
 
-	fflush(stdout);
+	// fflush(stdout);
 }
 
 /* Calcul le board après un coup */
@@ -975,11 +977,15 @@ static void *f_com_socket(void *p_arg)
 					hints.ai_family = AF_UNSPEC;
 					hints.ai_socktype = SOCK_STREAM;
 					
+					// Ferme socket d'écoute
 					close(fd_signal);
 					close(sockfd);
+
+					// Remove des fd du fd master
 					FD_CLR(fd_signal, &master);
 					FD_CLR(sockfd, &master);
 					
+					// infos joueur adverse avec params de servinfo
 					rv = getaddrinfo(addr_j2, port_j2, &hints, &servinfo);
 
 					if(rv != 0) 
@@ -990,10 +996,13 @@ static void *f_com_socket(void *p_arg)
 					
 					for(p = servinfo; p != NULL; p = p->ai_next) 
 					{
+						// Nouveau socket
 						if((newsockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
 							perror("client: socket");
 							continue;
 						}
+
+						// Connexion au socket
 						if((connect(newsockfd, p->ai_addr, p->ai_addrlen)) == -1) {
 							close(sockfd);
 							perror("client: connect");
@@ -1009,6 +1018,7 @@ static void *f_com_socket(void *p_arg)
 
 					freeaddrinfo(servinfo);
 
+					// Mise du fd du nouveau socket dans master
 					FD_SET(newsockfd, &master);
                     if(newsockfd>fdmax)
                     {
@@ -1064,12 +1074,15 @@ static void *f_com_socket(void *p_arg)
 				/***** TO DO *****/
 
 				// Structure d'un message: head(taille du message), "col,lig"
+				// Récepetion du head
 				recv(newsockfd, head, 2, 0);
+				// allocation memoire dela taille conetnue dans le head
 				memcpy(&taille_message, head, 2);
 				taille = (int) ntohs(taille_message);
 
 				if (taille == 0) continue; // Message de 0 octets lors de l'initialisation
 
+				// Réception des coords
 				recv(newsockfd, msg, taille*sizeof(char), 0);
 
 				// Récup lig et col
@@ -1081,6 +1094,7 @@ static void *f_com_socket(void *p_arg)
 				sscanf(incomming_col, "%u", &tmp_col);
 				sscanf(incomming_line, "%u", &tmp_lig);
 
+				// Conversion du network vers int
 				int col, lig;
 				col = (int) ntohs(tmp_col);
 				lig = (int) ntohs(tmp_lig);
@@ -1235,9 +1249,6 @@ int main(int argc, char **argv)
 			s_init.ai_socktype = SOCK_STREAM;
 			s_init.ai_flags = AI_PASSIVE;
 
-			// FD_SET(sockfd, &master);
-
-
 			if (getaddrinfo(NULL, argv[1], &s_init, &servinfo) != 0) {
     			  fprintf(stderr, "Erreur getaddrinfo\n");
     			  exit(1);
@@ -1278,11 +1289,13 @@ int main(int argc, char **argv)
 
 			// pthread_t thread1;
 
+			// Création du thread de communication, affectation de la fonction f_com_socket
 			if(pthread_create(&thr_id, NULL, f_com_socket, NULL) == -1) {
 				perror("pthread_create");
 				return EXIT_FAILURE;
 			}
 
+			// Affichage interface hraphique
 			gtk_widget_show_all(p_win);
 			gtk_main();
 		}
