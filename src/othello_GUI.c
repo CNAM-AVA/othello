@@ -533,60 +533,6 @@ static void coup_joueur(GtkWidget *p_case)
 	// fflush(stdout);
 }
 
-/* Calcul le board après un coup */
-	/*
-     * None = -1, Black = 0, White = 1
-	 *
-	 *      0  1  2  3  4  5  6  7
-	 *    ________________________
-	 * 0 | -1 -1 -1 -1 -1 -1 -1 -1
-	 * 1 | -1 -1 -1 -1 -1 -1 -1 -1
-	 * 2 | -1 -1 -1 -1 -1 -1 -1 -1
-	 * 3 | -1 -1 -1  1  0 -1 -1 -1
-	 * 4 | -1 -1 -1  0  1 -1 -1 -1
-	 * 5 | -1 -1 -1 -1 -1 -1 -1 -1
-	 * 6 | -1 -1 -1 -1 -1 -1 -1 -1
-	 * 7 | -1 -1 -1 -1 -1 -1 -1 -1
-	 * 
-	 *  
-	 */
-// void compute_board(int col, int lig) {
-
-// 	pion detecteds[64];
-// 	int number_detected = 0;
-
-// 	// BUG: Détecte des pions blancs ?
-
-// 	// Détecte la présence des pions noirs déjà existants sur la colonne
-// 	for (int i = 0; i < 8; i++) {
-// 		if (lig == i) continue; // skip the new
-
-// 		if (damier[col][i] == 0) {
-// 			pion p = { .col = col, .lig = i };
-// 			detecteds[number_detected] = p;
-// 			number_detected += 1;
-// 		}
-// 	}
-
-// 	// Détecte la présence des pions noirs déjà existants sur la ligne
-// 	for (int i = 0; i < 8; i++) {
-// 		if (col == i) continue;
-
-// 		if (damier[i][lig] == 0) {
-// 			pion p = { .col = i, .lig = lig };
-// 			detecteds[number_detected] = p;
-// 			number_detected += 1;
-// 		}
-// 	}
-
-// 	printf("Pions noir détectés : \n");
-// 	for (int i = 0; i < number_detected; i++) {
-// 		printf("# {%d,%d}\n", detecteds[i].col, detecteds[i].lig);
-// 	}
-// 	printf("----------------------\n");
-
-// }
-
 /* Fonction retournant texte du champs adresse du serveur de l'interface graphique */
 char *lecture_addr_serveur(void)
 {
